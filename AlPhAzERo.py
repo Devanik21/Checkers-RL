@@ -416,14 +416,14 @@ class AlphaZeroAgent:
         self.lr = lr
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = 0.9995
-        self.epsilon_min = 0.05
+        self.epsilon_decay = 0.96
+        self.epsilon_min = 0.01
         
         # Q-Learning component
         self.q_table = {}
         
         # MCTS parameters
-        self.mcts_simulations = 150
+        self.mcts_simulations = 250
         self.c_puct = 1.4
         self.minimax_depth = 5
         
@@ -504,6 +504,7 @@ class AlphaZeroAgent:
             return 0.0
         
         # Use minimax for deeper evaluation
+        
         score = self._minimax(game, self.minimax_depth, -float('inf'), float('inf'), True)
         
         # Normalize to [-1, 1]
@@ -780,13 +781,13 @@ st.sidebar.header("⚙️ AlphaZero Controls")
 with st.sidebar.expander("1. Agent 1 (Red) Parameters", expanded=True):
     lr1 = st.slider("Learning Rate α₁", 0.1, 1.0, 0.3, 0.05)
     gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
-    mcts_sims1 = st.slider("MCTS Simulations₁", 5, 500, 50, 25)
+    mcts_sims1 = st.slider("MCTS Simulations₁", 5, 500, 100, 25)
     minimax_depth1 = st.slider("Minimax Depth₁", 1, 10, 1, 1)
 
 with st.sidebar.expander("2. Agent 2 (White) Parameters", expanded=True):
     lr2 = st.slider("Learning Rate α₂", 0.1, 1.0, 0.3, 0.05)
     gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
-    mcts_sims2 = st.slider("MCTS Simulations₂", 5, 500, 50, 25)
+    mcts_sims2 = st.slider("MCTS Simulations₂", 5, 500, 100, 25)
     minimax_depth2 = st.slider("Minimax Depth₂", 1, 10, 1, 1)
 
 with st.sidebar.expander("3. Training Configuration", expanded=True):
