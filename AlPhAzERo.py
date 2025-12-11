@@ -724,30 +724,43 @@ def clean_state_key(state_tuple):
 # Ultimate Robust Save/Load System
 # ============================================================================
 
+# ============================================================================
+# Ultimate Robust Save/Load System (Updated)
+# ============================================================================
+
 def create_agents_zip(agent1, agent2, config):
     """
     Robust Save: Converts all Numpy/Custom types to standard Python types.
     """
     def serialize_agent(agent, role_name):
-        # Convert the complex policy table into a simple dictionary
-        # Structure: { "state_str": { "move_json_str": value, ... }, ... }
         clean_policy = {}
         
-        # We iterate carefully to avoid 'dict changed size during iteration' errors
-        current_policies = list(agent.policy_table.items())
+        # Convert defaultdict to standard dict for iteration
+        # We assume agent.policy_table is: { state_tuple: { move_obj: value_float } }
+        current_policies = agent.policy_table.copy()
         
-        for state, moves in current_policies:
-            # Clean the state key (remove numpy types)
-            clean_k = clean_state_key(state)
-            clean_policy[clean_k] = {}
-            
-            for move, value in moves.items():
-                # Serialize the Move object to a JSON string representation
-                move_key = json.dumps(serialize_move(move))
-                clean_policy[clean_k][move_key] = float(value)
+        for state, moves in current_policies.items():
+            try:
+                # 1. Clean the state key (ensure standard python ints)
+                # state is likely a tuple of numpy ints, we convert to tuple of standard ints
+                clean_state = tuple(int(x) for x in state)
+                state_str = str(clean_state) # Use string representation for JSON key
+                
+                clean_policy[state_str] = {}
+                
+                for move, value in moves.items():
+                    # 2. Serialize the Move object to a JSON string
+                    # We use the helper function you already have: serialize_move
+                    move_json_str = json.dumps(serialize_move(move))
+                    
+                    # 3. Store the value (ensure it's a standard float)
+                    clean_policy[state_str][move_json_str] = float(value)
+            except Exception as e:
+                # Skip any malformed entries to prevent crash
+                continue
 
         return {
-            "metadata": {"role": role_name, "version": "2.0"},
+            "metadata": {"role": role_name, "version": "2.1"},
             "policy_table": clean_policy,
             "epsilon": float(agent.epsilon),
             "wins": int(agent.wins),
@@ -772,7 +785,7 @@ def create_agents_zip(agent1, agent2, config):
 
 def load_agents_from_zip(uploaded_file):
     """
-    Robust Load: Reconstructs Agents using the helper functions.
+    Robust Load: Reconstructs Agents with error checking.
     """
     try:
         with zipfile.ZipFile(uploaded_file, "r") as zf:
@@ -795,16 +808,18 @@ def load_agents_from_zip(uploaded_file):
                 agent.draws = data.get('draws', 0)
                 agent.mcts_simulations = data.get('mcts_sims', 50)
                 
-                # Reconstruct Policy Table
+                # Clear existing policy to avoid mixing
+                agent.policy_table = defaultdict(lambda: defaultdict(float))
+                
                 loaded_policies = 0
                 policy_data = data.get('policy_table', {})
                 
                 for state_str, moves_dict in policy_data.items():
                     try:
                         # Restore State: "(0, 1, ...)" -> tuple(0, 1, ...)
-                        # We use eval() here ONLY for the tuple of ints, which is safe enough
-                        # provided we trust the source.
-                        state = tuple(json.loads(state_str.replace("(", "[").replace(")", "]")))
+                        # literal_eval is safer than json.loads for tuples in strings
+                        import ast
+                        state = ast.literal_eval(state_str)
                         
                         for move_json_str, value in moves_dict.items():
                             # Restore Move from JSON string dictionary
@@ -814,23 +829,22 @@ def load_agents_from_zip(uploaded_file):
                             agent.policy_table[state][move] = value
                         loaded_policies += 1
                     except Exception as e:
-                        print(f"Skipped bad entry: {e}")
                         continue
                 return loaded_policies
 
             # 4. Reconstruct Agents
+            # Create new instances to ensure clean slate
             agent1 = AlphaZeroAgent(1, config.get('lr1', 0.3), config.get('gamma1', 0.95))
             count1 = restore_agent(agent1, a1_data)
             
             agent2 = AlphaZeroAgent(2, config.get('lr2', 0.3), config.get('gamma2', 0.95))
             count2 = restore_agent(agent2, a2_data)
 
-            st.toast(f"✅ Brain Loaded! Restored {count1 + count2} states.", icon="🧠")
-            return agent1, agent2, config
+            return agent1, agent2, config, count1 + count2
             
     except Exception as e:
         st.error(f"❌ Error loading brain: {str(e)}")
-        return None, None, None
+        return None, None, None, 0
 # ============================================================================
 # Streamlit UI
 # ============================================================================
@@ -872,21 +886,24 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
     else:
         st.info("Train agents first")
     
+    
+    
     st.markdown("---")
     
     uploaded_file = st.file_uploader("📤 Upload Saved Agents (.zip)", type="zip")
     if uploaded_file is not None:
         if st.button("🔄 Load Agents", use_container_width=True):
-            a1, a2, cfg = load_agents_from_zip(uploaded_file)
+            # Note the extra return variable 'count'
+            a1, a2, cfg, count = load_agents_from_zip(uploaded_file)
             if a1 and a2:
                 st.session_state.agent1 = a1
                 st.session_state.agent2 = a2
-                
-                # Restore training history if available
                 st.session_state.training_history = cfg.get("training_history", None)
                 
-                st.toast("✅ Agents Loaded Successfully!", icon="🧠")
-                st.rerun()
+                st.toast(f"✅ Loaded Brain! {count} memories restored.", icon="🧠")
+                import time
+                time.sleep(1)
+                st.rerun() # Refresh so the app uses the new agents immediately
             else:
                 st.error("Failed to load agents")
 
@@ -995,6 +1012,11 @@ if train_button:
     progress_bar.progress(1.0)
     st.toast("Training Complete! 🎉", icon="✨")
     st.session_state.training_history = history
+    
+    import time
+    with st.spinner("Saving new brain state..."):
+        time.sleep(1) # Give a moment for the user to see the success message
+        st.rerun()
 
 # Display training charts
 if 'training_history' in st.session_state:
