@@ -523,7 +523,7 @@ class AlphaZeroAgent:
         
         if maximizing:
             max_eval = -float('inf')
-            for move in moves[:10]:  # Limit branching
+            for move in search_candidates:
                 sim_game = game.copy()
                 sim_game.make_move(move)
                 eval_score = self._minimax(sim_game, depth - 1, alpha, beta, False)
@@ -534,7 +534,7 @@ class AlphaZeroAgent:
             return max_eval
         else:
             min_eval = float('inf')
-            for move in moves[:10]:
+            for move in search_candidates:
                 sim_game = game.copy()
                 sim_game.make_move(move)
                 eval_score = self._minimax(sim_game, depth - 1, alpha, beta, True)
