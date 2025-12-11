@@ -1018,27 +1018,45 @@ if train_button:
         time.sleep(1) # Give a moment for the user to see the success message
         st.rerun()
 
-# Display training charts
-if 'training_history' in st.session_state:
-    st.subheader("📊 Training Analytics")
+# ============================================================================
+# SAFETY UPDATE: Replace the "Display training charts" section
+# ============================================================================
+
+if 'training_history' in st.session_state and st.session_state.training_history:
     history = st.session_state.training_history
-    df = pd.DataFrame(history)
     
-    chart_col1, chart_col2 = st.columns(2)
-    
-    with chart_col1:
-        st.write("#### Win/Draw Distribution")
-        chart_data = df[['episode', 'agent1_wins', 'agent2_wins', 'draws']].set_index('episode')
-        st.line_chart(chart_data)
-    
-    with chart_col2:
-        st.write("#### Exploration Rate (Epsilon)")
-        chart_data = df[['episode', 'agent1_epsilon', 'agent2_epsilon']].set_index('episode')
-        st.line_chart(chart_data)
-    
-    st.write("#### Policy Network Growth")
-    chart_data = df[['episode', 'agent1_policies', 'agent2_policies']].set_index('episode')
-    st.line_chart(chart_data)
+    # Check if history actually has data before trying to plot
+    if isinstance(history, dict) and 'episode' in history and len(history['episode']) > 0:
+        st.subheader("📊 Training Analytics")
+        df = pd.DataFrame(history)
+        
+        chart_col1, chart_col2 = st.columns(2)
+        
+        with chart_col1:
+            st.write("#### Win/Draw Distribution")
+            # Safe access: ensure columns exist
+            cols_needed = ['episode', 'agent1_wins', 'agent2_wins', 'draws']
+            if all(col in df.columns for col in cols_needed):
+                chart_data = df[cols_needed].set_index('episode')
+                st.line_chart(chart_data, color=["#FF4B4B", "#FFFFFF", "#808080"]) # Red, White, Grey
+            else:
+                st.warning("⚠️ Incomplete win data in history.")
+        
+        with chart_col2:
+            st.write("#### Exploration Rate (Epsilon)")
+            cols_needed = ['episode', 'agent1_epsilon', 'agent2_epsilon']
+            if all(col in df.columns for col in cols_needed):
+                chart_data = df[cols_needed].set_index('episode')
+                st.line_chart(chart_data)
+        
+        st.write("#### Policy Network Growth")
+        cols_needed = ['episode', 'agent1_policies', 'agent2_policies']
+        if all(col in df.columns for col in cols_needed):
+            chart_data = df[cols_needed].set_index('episode')
+            st.line_chart(chart_data)
+    else:
+        # Gracefully handle empty history
+        st.info("ℹ️ No training history found in this save file. Train more to generate analytics!")
 
 # Final Battle Visualization
 if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
