@@ -518,6 +518,8 @@ class AlphaZeroAgent:
         moves = game.get_all_valid_moves()
         if not moves:
             return game.evaluate_position(self.player_id)
+
+        search_candidates = moves[:4]
         
         if maximizing:
             max_eval = -float('inf')
