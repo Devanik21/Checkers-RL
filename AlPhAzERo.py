@@ -723,6 +723,54 @@ def create_agents_zip(agent1, agent2, config):
     buffer.seek(0)
     return buffer
 
+def load_agents_from_zip(uploaded_file):
+    """Load agents from uploaded zip file"""
+    try:
+        with zipfile.ZipFile(uploaded_file, "r") as zf:
+            agent1_state = json.loads(zf.read("agent1.json"))
+            agent2_state = json.loads(zf.read("agent2.json"))
+            config = json.loads(zf.read("config.json"))
+            
+            # Reconstruct Agent 1
+            agent1 = AlphaZeroAgent(1, 
+                                    config.get('lr1', 0.3), 
+                                    config.get('gamma1', 0.95))
+            agent1.epsilon = agent1_state.get('epsilon', 0.05)
+            agent1.wins = agent1_state.get('wins', 0)
+            agent1.losses = agent1_state.get('losses', 0)
+            agent1.draws = agent1_state.get('draws', 0)
+            agent1.mcts_simulations = agent1_state.get('mcts_sims', 150)
+            
+            # Restore policy table (convert string keys back)
+            for state_str, moves_dict in agent1_state.get('policy_table', {}).items():
+                state = eval(state_str)
+                for move_str, value in moves_dict.items():
+                    move = eval(move_str)
+                    agent1.policy_table[state][move] = value
+            
+            # Reconstruct Agent 2
+            agent2 = AlphaZeroAgent(2, 
+                                    config.get('lr2', 0.3), 
+                                    config.get('gamma2', 0.95))
+            agent2.epsilon = agent2_state.get('epsilon', 0.05)
+            agent2.wins = agent2_state.get('wins', 0)
+            agent2.losses = agent2_state.get('losses', 0)
+            agent2.draws = agent2_state.get('draws', 0)
+            agent2.mcts_simulations = agent2_state.get('mcts_sims', 150)
+            
+            # Restore policy table
+            for state_str, moves_dict in agent2_state.get('policy_table', {}).items():
+                state = eval(state_str)
+                for move_str, value in moves_dict.items():
+                    move = eval(move_str)
+                    agent2.policy_table[state][move] = value
+            
+            return agent1, agent2, config
+            
+    except Exception as e:
+        st.error(f"Failed to load agents: {e}")
+        return None, None, None
+
 # ============================================================================
 # Streamlit UI
 # ============================================================================
@@ -732,24 +780,25 @@ st.sidebar.header("⚙️ AlphaZero Controls")
 with st.sidebar.expander("1. Agent 1 (Red) Parameters", expanded=True):
     lr1 = st.slider("Learning Rate α₁", 0.1, 1.0, 0.3, 0.05)
     gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
-    mcts_sims1 = st.slider("MCTS Simulations₁", 5, 500, 150, 25)
-    minimax_depth1 = st.slider("Minimax Depth₁", 1, 10, 5, 1)
+    mcts_sims1 = st.slider("MCTS Simulations₁", 50, 500, 150, 25)
+    minimax_depth1 = st.slider("Minimax Depth₁", 3, 7, 5, 1)
 
 with st.sidebar.expander("2. Agent 2 (White) Parameters", expanded=True):
     lr2 = st.slider("Learning Rate α₂", 0.1, 1.0, 0.3, 0.05)
     gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
-    mcts_sims2 = st.slider("MCTS Simulations₂", 5, 500, 150, 25)
-    minimax_depth2 = st.slider("Minimax Depth₂", 1, 10, 5, 1)
+    mcts_sims2 = st.slider("MCTS Simulations₂", 50, 500, 150, 25)
+    minimax_depth2 = st.slider("Minimax Depth₂", 3, 7, 5, 1)
 
 with st.sidebar.expander("3. Training Configuration", expanded=True):
     episodes = st.number_input("Training Episodes", 100, 10000, 1000, 100)
-    update_freq = st.number_input("Update Every N Games", 10, 500, 50, 100)
+    update_freq = st.number_input("Update Every N Games", 10, 500, 50, 10)
 
 with st.sidebar.expander("4. Brain Storage", expanded=False):
     if 'agent1' in st.session_state and st.session_state.agent1:
         config = {
             "lr1": lr1, "gamma1": gamma1, "mcts_sims1": mcts_sims1, "minimax_depth1": minimax_depth1,
-            "lr2": lr2, "gamma2": gamma2, "mcts_sims2": mcts_sims2, "minimax_depth2": minimax_depth2
+            "lr2": lr2, "gamma2": gamma2, "mcts_sims2": mcts_sims2, "minimax_depth2": minimax_depth2,
+            "training_history": st.session_state.get('training_history', None)
         }
         
         zip_buffer = create_agents_zip(st.session_state.agent1, st.session_state.agent2, config)
@@ -762,6 +811,24 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
         )
     else:
         st.info("Train agents first")
+    
+    st.markdown("---")
+    
+    uploaded_file = st.file_uploader("📤 Upload Saved Agents (.zip)", type="zip")
+    if uploaded_file is not None:
+        if st.button("🔄 Load Agents", use_container_width=True):
+            a1, a2, cfg = load_agents_from_zip(uploaded_file)
+            if a1 and a2:
+                st.session_state.agent1 = a1
+                st.session_state.agent2 = a2
+                
+                # Restore training history if available
+                st.session_state.training_history = cfg.get("training_history", None)
+                
+                st.toast("✅ Agents Loaded Successfully!", icon="🧠")
+                st.rerun()
+            else:
+                st.error("Failed to load agents")
 
 train_button = st.sidebar.button("🚀 Begin Self-Play Training", 
                                  use_container_width=True, type="primary")
