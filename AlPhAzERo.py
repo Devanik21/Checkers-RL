@@ -695,9 +695,10 @@ def visualize_board(board, title="Checkers Board"):
 
 def create_agents_zip(agent1, agent2, config):
     """Package agents and config into zip"""
+    # FIX: Added list() around agent1.policy_table.items() to prevent iteration error
     agent1_state = {
         "policy_table": {str(k): {str(m): v for m, v in moves.items()} 
-                        for k, moves in agent1.policy_table.items()},
+                        for k, moves in list(agent1.policy_table.items())},
         "epsilon": agent1.epsilon,
         "wins": agent1.wins,
         "losses": agent1.losses,
@@ -705,9 +706,10 @@ def create_agents_zip(agent1, agent2, config):
         "mcts_sims": agent1.mcts_simulations
     }
     
+    # FIX: Added list() around agent2.policy_table.items()
     agent2_state = {
         "policy_table": {str(k): {str(m): v for m, v in moves.items()} 
-                        for k, moves in agent2.policy_table.items()},
+                        for k, moves in list(agent2.policy_table.items())},
         "epsilon": agent2.epsilon,
         "wins": agent2.wins,
         "losses": agent2.losses,
