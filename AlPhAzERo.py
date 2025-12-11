@@ -743,7 +743,7 @@ with st.sidebar.expander("2. Agent 2 (White) Parameters", expanded=True):
 
 with st.sidebar.expander("3. Training Configuration", expanded=True):
     episodes = st.number_input("Training Episodes", 100, 10000, 1000, 100)
-    update_freq = st.number_input("Update Every N Games", 10, 500, 5, 10)
+    update_freq = st.number_input("Update Every N Games", 10, 500, 5, 1)
 
 with st.sidebar.expander("4. Brain Storage", expanded=False):
     if 'agent1' in st.session_state and st.session_state.agent1:
