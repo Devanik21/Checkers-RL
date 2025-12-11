@@ -830,7 +830,7 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
             else:
                 st.error("Failed to load agents")
 
-train_button = st.sidebar.button("🚀 Begin Self-Play Training", 
+train_button = st.sidebar.button(" Begin Self-Play Training", 
                                  use_container_width=True, type="primary")
 
 if st.sidebar.button("🧹 Reset Arena", use_container_width=True):
@@ -963,7 +963,7 @@ if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
     st.subheader("⚔️ Final Championship Match")
     st.info("Watch the trained AlphaZero agents compete in a decisive battle!")
     
-    if st.button("👁️ Watch Them Play!", use_container_width=True):
+    if st.button(" Watch Them Play!", use_container_width=True):
         sim_env = Checkers()
         board_placeholder = st.empty()
         move_text = st.empty()
