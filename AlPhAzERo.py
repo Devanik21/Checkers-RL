@@ -836,13 +836,13 @@ with st.sidebar.expander("1. Agent 1 (Red) Parameters", expanded=True):
     lr1 = st.slider("Learning Rate α₁", 0.1, 1.0, 0.3, 0.05)
     gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
     mcts_sims1 = st.slider("MCTS Simulations₁", 5, 500, 50, 25)
-    minimax_depth1 = st.slider("Minimax Depth₁", 1, 10, 1, 1)
+    minimax_depth1 = st.slider("Minimax Depth₁", 1, 10, 2, 1)
 
 with st.sidebar.expander("2. Agent 2 (White) Parameters", expanded=True):
     lr2 = st.slider("Learning Rate α₂", 0.1, 1.0, 0.3, 0.05)
     gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
     mcts_sims2 = st.slider("MCTS Simulations₂", 5, 500, 50, 25)
-    minimax_depth2 = st.slider("Minimax Depth₂", 1, 10, 1, 1)
+    minimax_depth2 = st.slider("Minimax Depth₂", 1, 10, 2, 1)
 
 with st.sidebar.expander("3. Training Configuration", expanded=True):
     episodes = st.number_input("Training Episodes", 10, 10000, 1000, 10)
@@ -1162,4 +1162,4 @@ if len(agent1.policy_table) > 100:
                         st.session_state.selected_piece = None
                         st.rerun()
 else:
-    st.info("🏋️ Train agents first to unlock Human vs AI mode!")
+    st.info(" Train agents first to unlock Human vs AI mode!")
