@@ -692,13 +692,21 @@ def visualize_board(board, title="Checkers Board"):
     return fig
 
 # ============================================================================
-# Save/Load
+# Ultimate Robust Save/Load System
 # ============================================================================
 
 def create_agents_zip(agent1, agent2, config):
-    """Package agents and config into zip"""
-    # FIX: Added list() around agent1.policy_table.items() to prevent iteration error
+    """
+    Ultimate Robust Save:
+    1. Uses UTF-8 Binary Encoding (Prevents Emoji/Unicode errors)
+    2. Uses list() snapshot (Prevents 'Dictionary changed size' error)
+    3. Saves metadata for reliability
+    """
+    
+    # Snapshot Agent 1 (Safe iteration with list())
     agent1_state = {
+        "metadata": {"role": "Red", "version": "1.0"},
+        # CRITICAL FIX: list() prevents iteration errors
         "policy_table": {str(k): {str(m): v for m, v in moves.items()} 
                         for k, moves in list(agent1.policy_table.items())},
         "epsilon": agent1.epsilon,
@@ -708,8 +716,9 @@ def create_agents_zip(agent1, agent2, config):
         "mcts_sims": agent1.mcts_simulations
     }
     
-    # FIX: Added list() around agent2.policy_table.items()
+    # Snapshot Agent 2
     agent2_state = {
+        "metadata": {"role": "White", "version": "1.0"},
         "policy_table": {str(k): {str(m): v for m, v in moves.items()} 
                         for k, moves in list(agent2.policy_table.items())},
         "epsilon": agent2.epsilon,
@@ -719,24 +728,47 @@ def create_agents_zip(agent1, agent2, config):
         "mcts_sims": agent2.mcts_simulations
     }
     
+    # Create Zip in Memory using Bytes
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("agent1.json", json.dumps(agent1_state))
-        zf.writestr("agent2.json", json.dumps(agent2_state))
-        zf.writestr("config.json", json.dumps(config))
+        # UNIVERSAL ENCODING FIX:
+        # 1. json.dumps(..., ensure_ascii=False) -> Keeps Emojis as Emojis
+        # 2. .encode('utf-8') -> Converts to Raw Bytes
+        # This bypasses OS text encoding issues completely.
+        
+        zf.writestr("agent1.json", json.dumps(agent1_state, ensure_ascii=False).encode('utf-8'))
+        zf.writestr("agent2.json", json.dumps(agent2_state, ensure_ascii=False).encode('utf-8'))
+        zf.writestr("config.json", json.dumps(config, ensure_ascii=False).encode('utf-8'))
     
     buffer.seek(0)
     return buffer
 
 def load_agents_from_zip(uploaded_file):
-    """Load agents from uploaded zip file"""
+    """
+    Ultimate Robust Load:
+    1. strict UTF-8 decoding (Restores Emojis correctly)
+    2. Validates file integrity before crashing
+    3. Handles missing keys gracefully
+    """
     try:
         with zipfile.ZipFile(uploaded_file, "r") as zf:
-            agent1_state = json.loads(zf.read("agent1.json"))
-            agent2_state = json.loads(zf.read("agent2.json"))
-            config = json.loads(zf.read("config.json"))
+            # 1. Validation: Check if files exist
+            files = zf.namelist()
+            required = ["agent1.json", "agent2.json", "config.json"]
+            if not all(f in files for f in required):
+                st.error("❌ Corrupt File: Missing critical agent data inside zip.")
+                return None, None, None
+
+            # 2. Safe Loading (Read Bytes -> Decode UTF-8 -> JSON)
+            a1_data = zf.read("agent1.json").decode('utf-8')
+            a2_data = zf.read("agent2.json").decode('utf-8')
+            cfg_data = zf.read("config.json").decode('utf-8')
             
-            # Reconstruct Agent 1
+            agent1_state = json.loads(a1_data)
+            agent2_state = json.loads(a2_data)
+            config = json.loads(cfg_data)
+            
+            # 3. Reconstruct Agent 1
             agent1 = AlphaZeroAgent(1, 
                                     config.get('lr1', 0.3), 
                                     config.get('gamma1', 0.95))
@@ -746,14 +778,19 @@ def load_agents_from_zip(uploaded_file):
             agent1.draws = agent1_state.get('draws', 0)
             agent1.mcts_simulations = agent1_state.get('mcts_sims', 150)
             
-            # Restore policy table (convert string keys back)
+            # Policy reconstruction (Robust against malformed keys)
+            count1 = 0
             for state_str, moves_dict in agent1_state.get('policy_table', {}).items():
-                state = eval(state_str)
-                for move_str, value in moves_dict.items():
-                    move = eval(move_str)
-                    agent1.policy_table[state][move] = value
+                try:
+                    state = eval(state_str)
+                    for move_str, value in moves_dict.items():
+                        move = eval(move_str)
+                        agent1.policy_table[state][move] = value
+                    count1 += 1
+                except:
+                    continue 
             
-            # Reconstruct Agent 2
+            # 4. Reconstruct Agent 2
             agent2 = AlphaZeroAgent(2, 
                                     config.get('lr2', 0.3), 
                                     config.get('gamma2', 0.95))
@@ -763,19 +800,32 @@ def load_agents_from_zip(uploaded_file):
             agent2.draws = agent2_state.get('draws', 0)
             agent2.mcts_simulations = agent2_state.get('mcts_sims', 150)
             
-            # Restore policy table
+            # Policy reconstruction
+            count2 = 0
             for state_str, moves_dict in agent2_state.get('policy_table', {}).items():
-                state = eval(state_str)
-                for move_str, value in moves_dict.items():
-                    move = eval(move_str)
-                    agent2.policy_table[state][move] = value
+                try:
+                    state = eval(state_str)
+                    for move_str, value in moves_dict.items():
+                        move = eval(move_str)
+                        agent2.policy_table[state][move] = value
+                    count2 += 1
+                except:
+                    continue
+
+            # Success Message (Optional: remove if you want silence)
+            st.toast(f"✅ Brain Loaded! Restored {count1 + count2} memories.", icon="🧠")
             
             return agent1, agent2, config
             
-    except Exception as e:
-        st.error(f"Failed to load agents: {e}")
+    except zipfile.BadZipFile:
+        st.error("❌ Error: The uploaded file is not a valid zip archive.")
         return None, None, None
-
+    except json.JSONDecodeError:
+        st.error("❌ Error: Brain file is corrupted (JSON Decode Error).")
+        return None, None, None
+    except Exception as e:
+        st.error(f"❌ Unexpected Error: {str(e)}")
+        return None, None, None
 # ============================================================================
 # Streamlit UI
 # ============================================================================
