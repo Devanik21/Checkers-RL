@@ -262,25 +262,29 @@ class Checkers:
     
     def evaluate_position(self, player):
         """
-        AlphaZero-inspired evaluation function
-        Mimics a value head neural network output
+        AlphaZero-Inspired Symmetric Evaluation
+        Uses a Piece-Square Table (PST) to define positional value purely.
         """
         if self.winner == player:
-            return 10000
+            return 100000
         if self.winner == (3 - player):
-            return -10000
+            return -100000
         
         opponent = 3 - player
         score = 0
         
-        # Material count (like NN feature extraction)
-        my_pieces = my_kings = 0
-        opp_pieces = opp_kings = 0
-        
-        # Positional factors
-        center_control = 0
-        advancement = 0
-        back_row_integrity = 0
+        # 8x8 Positional Heatmap (High value = Strategic Square)
+        # Edges (4) are safe (can't be flanked). Center (5) is powerful.
+        pst = [
+            [0, 4, 0, 4, 0, 4, 0, 4],  # Row 0 (Red Promotion / White Base)
+            [4, 0, 3, 0, 3, 0, 3, 0],  # Row 1
+            [0, 3, 0, 2, 0, 2, 0, 4],  # Row 2
+            [4, 0, 5, 0, 5, 0, 3, 0],  # Row 3 (Center)
+            [0, 3, 0, 5, 0, 5, 0, 4],  # Row 4 (Center)
+            [4, 0, 2, 0, 2, 0, 3, 0],  # Row 5
+            [0, 3, 0, 3, 0, 3, 0, 4],  # Row 6
+            [4, 0, 4, 0, 4, 0, 4, 0]   # Row 7 (White Promotion / Red Base)
+        ]
         
         for row in range(8):
             for col in range(8):
@@ -288,56 +292,39 @@ class Checkers:
                 if piece == 0:
                     continue
                 
+                # Determine owner and type
                 is_mine = (abs(piece) % 3 == player)
                 is_king = abs(piece) > 2
                 
-                # Material
-                if is_mine:
-                    if is_king:
-                        my_kings += 1
-                    else:
-                        my_pieces += 1
-                else:
-                    if is_king:
-                        opp_kings += 1
-                    else:
-                        opp_pieces += 1
+                # Base Value
+                # Kings are significantly more valuable to prevent careless trades
+                piece_val = 500 if is_king else 100 
                 
-                # Positional evaluation
+                # Positional Bonus from Table
+                # We flip the row index for RED (Player 1) so the board looks identical to both
+                if player == 1: # Red moves UP (from 7 to 0)
+                    pos_val = pst[row][col]
+                    # Bonus for advancing towards promotion
+                    advancement = (7 - row) * 3 
+                else:           # White moves DOWN (from 0 to 7)
+                    pos_val = pst[7-row][col] # Flip PST reference
+                    # Bonus for advancing towards promotion
+                    advancement = row * 3
+                
                 if is_mine:
-                    # Center control (squares 2-5, 2-5)
-                    if 2 <= row <= 5 and 2 <= col <= 5:
-                        center_control += 3 if is_king else 2
-                    
-                    # Advancement (pushing forward)
-                    if piece == 1:  # Red advances upward
-                        advancement += (7 - row) * 2
-                    elif piece == 2:  # White advances downward
-                        advancement += row * 2
-                    
-                    # Back row integrity (defense)
-                    if (player == 1 and row == 7) or (player == 2 and row == 0):
-                        back_row_integrity += 5
+                    score += piece_val + (pos_val * 5) + advancement
                 else:
-                    # Enemy center control
-                    if 2 <= row <= 5 and 2 <= col <= 5:
-                        center_control -= 3 if is_king else 2
-        
-        # Scoring weights (tuned for Checkers)
-        score += (my_pieces - opp_pieces) * 100
-        score += (my_kings - opp_kings) * 300
-        score += center_control * 10
-        score += advancement
-        score += back_row_integrity * 5
-        
-        # Mobility (move options)
+                    score -= piece_val + (pos_val * 5) + advancement
+
+        # Mobility Bonus (Freedom of movement)
+        # We check move counts to encourage open play and trap avoidance
         self.current_player = player
         my_moves = len(self.get_all_valid_moves())
         self.current_player = opponent
         opp_moves = len(self.get_all_valid_moves())
-        self.current_player = player
+        self.current_player = player # Reset
         
-        score += (my_moves - opp_moves) * 5
+        score += (my_moves - opp_moves) * 10
         
         return score
 
