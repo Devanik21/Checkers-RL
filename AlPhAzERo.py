@@ -100,10 +100,16 @@ class Checkers:
     def get_piece_moves(self, row, col):
         """Get all valid moves for a piece, prioritizing captures"""
         piece = self.board[row, col]
-        if piece == 0 or piece % 2 != self.current_player % 2:
+        if piece == 0:
             return []
         
-        is_king = abs(piece) > 2
+        # Strict ownership check
+        if self.current_player == 1 and piece not in [1, 3]:
+            return []  # Red can only move 1 or 3
+        if self.current_player == 2 and piece not in [2, 4]:
+            return []  # White can only move 2 or 4
+        
+        is_king = piece > 2
         captures = self._get_captures(row, col, is_king)
         
         if captures:
@@ -118,14 +124,11 @@ class Checkers:
         piece = self.board[row, col]
         
         # Direction based on player
-        # Direction based on player
         if piece == 1:  # Red moves up
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:  # White moves down
             directions = [(1, -1), (1, 1)]
-        elif piece == 3:  # Red King
-            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-        elif piece == 4:  # White King
+        else:  # Kings (3 or 4) move all directions
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
@@ -146,12 +149,11 @@ class Checkers:
         moves = []
         
         # All diagonal directions
-        # All diagonal directions
         if piece == 1:
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:
             directions = [(1, -1), (1, 1)]
-        elif piece == 3 or piece == 4:  # Kings move all directions
+        else:  # Kings (3 or 4) move all directions
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
