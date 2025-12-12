@@ -100,14 +100,8 @@ class Checkers:
     def get_piece_moves(self, row, col):
         """Get all valid moves for a piece, prioritizing captures"""
         piece = self.board[row, col]
-        if piece == 0:
+        if piece == 0 or abs(piece) != self.current_player:
             return []
-        
-        # Strict ownership check
-        if self.current_player == 1 and piece not in [1, 3]:
-            return [] # Red can only move 1 or 3
-        if self.current_player == 2 and piece not in [2, 4]:
-            return [] # White can only move 2 or 4
         
         is_king = abs(piece) > 2
         captures = self._get_captures(row, col, is_king)
@@ -117,31 +111,28 @@ class Checkers:
         
         # Only return simple moves if no captures available
         return self._get_simple_moves(row, col, is_king)
-
+    
     def _get_simple_moves(self, row, col, is_king):
         """Get non-capturing moves"""
         moves = []
         piece = self.board[row, col]
         
         # Direction based on player
-        # 1 = Red Man, 2 = White Man, 3 = Red King, 4 = White King
         if piece == 1:  # Red moves up
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:  # White moves down
             directions = [(1, -1), (1, 1)]
-        else:  # Kings (3 or 4) move both ways
+        else:  # Kings move both ways
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
             new_row, new_col = row + dr, col + dc
             if (0 <= new_row < 8 and 0 <= new_col < 8 and 
                 self.board[new_row, new_col] == 0):
-                # Check for promotion
                 promotion = (piece == 1 and new_row == 0) or (piece == 2 and new_row == 7)
                 moves.append(Move((row, col), (new_row, new_col), [], promotion))
         
         return moves
-
     
     def _get_captures(self, row, col, is_king, captured=None):
         """Recursively find all capture sequences (mandatory jumps)"""
@@ -168,19 +159,9 @@ class Checkers:
             
             enemy_piece = self.board[jump_row, jump_col]
             
-            # --- FIXED ENEMY IDENTIFICATION ---
-            if enemy_piece == 0:
-                continue
-                
-            # Determine if the piece is an enemy
-            is_enemy = False
-            if self.current_player == 1: # I am Red
-                if enemy_piece in [2, 4]: is_enemy = True # Enemy is White
-            else: # I am White
-                if enemy_piece in [1, 3]: is_enemy = True # Enemy is Red
-            
             # Must jump over enemy piece to empty square
-            if (is_enemy and
+            if (enemy_piece != 0 and 
+                (enemy_piece % 3) == (3 - self.current_player) and
                 self.board[land_row, land_col] == 0 and
                 (jump_row, jump_col) not in captured):
                 
@@ -209,7 +190,7 @@ class Checkers:
                     moves.append(Move(start, (land_row, land_col), new_captured, promotion))
         
         return moves
-
+    
     def get_all_valid_moves(self):
         """Get all legal moves for current player (captures are forced)"""
         all_moves = []
@@ -218,17 +199,7 @@ class Checkers:
         for row in range(8):
             for col in range(8):
                 piece = self.board[row, col]
-                
-                # Skip empty squares
-                if piece == 0: 
-                    continue
-                    
-                # Strict Player Check
-                is_my_piece = False
-                if self.current_player == 1 and piece in [1, 3]: is_my_piece = True
-                if self.current_player == 2 and piece in [2, 4]: is_my_piece = True
-                
-                if is_my_piece:
+                if piece != 0 and abs(piece) % 3 == self.current_player:
                     moves = self.get_piece_moves(row, col)
                     if moves and moves[0].captures:
                         has_captures = True
@@ -239,7 +210,7 @@ class Checkers:
             all_moves = [m for m in all_moves if m.captures]
         
         return all_moves
-
+    
     def make_move(self, move: Move):
         """Execute a move and return (next_state, reward, done)"""
         if self.game_over:
@@ -259,19 +230,12 @@ class Checkers:
         for cr, cc in move.captures:
             captured_piece = self.board[cr, cc]
             self.board[cr, cc] = 0
-            
-            # Points: Kings are worth more (3 points) than Men (1 point)
-            points += 3 if abs(captured_piece) > 2 else 1
-            
-            # Decrease opponent piece count
-            if captured_piece in [1, 3]: # Red piece captured
-                self.pieces_count[1] -= 1
-            else: # White piece captured
-                self.pieces_count[2] -= 1
+            points += 3 if abs(captured_piece) > 2 else 1  # Kings worth more
+            opponent = 3 - self.current_player
+            self.pieces_count[opponent] -= 1
         
         # Promotion to King
-        # Red (1) promotes at row 0, White (2) promotes at row 7
-        if move.promotion:
+        if move.promotion or (piece == 1 and er == 0) or (piece == 2 and er == 7):
             self.board[er, ec] = piece + 2  # 1->3 (Red King), 2->4 (White King)
             points += 2
         
@@ -281,26 +245,25 @@ class Checkers:
         reward = points
         opponent = 3 - self.current_player
         
-        # Win Method 1: Elimination
         if self.pieces_count[opponent] == 0:
             self.game_over = True
             self.winner = self.current_player
             reward = 100
         else:
-            # Win Method 2: Stalemate (Opponent has no moves)
+            # Check if opponent has any moves
             self.current_player = opponent
             if not self.get_all_valid_moves():
                 self.game_over = True
-                self.winner = 3 - opponent # The player who forced the stalemate wins
+                self.winner = 3 - opponent
                 self.current_player = 3 - opponent
                 reward = 100
         
         return self.get_state(), reward, self.game_over
-
     
     def evaluate_position(self, player):
         """
-        AlphaZero-Inspired Symmetric Evaluation
+        -Inspired Symmetric Evaluation
+        Uses a Piece-Square Table (PST) to define positional value purely.
         """
         if self.winner == player:
             return 100000
@@ -310,16 +273,17 @@ class Checkers:
         opponent = 3 - player
         score = 0
         
-        # PST Table (Same as before)
+        # 8x8 Positional Heatmap (High value = Strategic Square)
+        # Edges (4) are safe (can't be flanked). Center (5) is powerful.
         pst = [
-            [0, 4, 0, 4, 0, 4, 0, 4], 
-            [4, 0, 3, 0, 3, 0, 3, 0], 
-            [0, 3, 0, 2, 0, 2, 0, 4], 
-            [4, 0, 5, 0, 5, 0, 3, 0], 
-            [0, 3, 0, 5, 0, 5, 0, 4], 
-            [4, 0, 2, 0, 2, 0, 3, 0], 
-            [0, 3, 0, 3, 0, 3, 0, 4], 
-            [4, 0, 4, 0, 4, 0, 4, 0]  
+            [0, 4, 0, 4, 0, 4, 0, 4],  # Row 0 (Red Promotion / White Base)
+            [4, 0, 3, 0, 3, 0, 3, 0],  # Row 1
+            [0, 3, 0, 2, 0, 2, 0, 4],  # Row 2
+            [4, 0, 5, 0, 5, 0, 3, 0],  # Row 3 (Center)
+            [0, 3, 0, 5, 0, 5, 0, 4],  # Row 4 (Center)
+            [4, 0, 2, 0, 2, 0, 3, 0],  # Row 5
+            [0, 3, 0, 3, 0, 3, 0, 4],  # Row 6
+            [4, 0, 4, 0, 4, 0, 4, 0]   # Row 7 (White Promotion / Red Base)
         ]
         
         for row in range(8):
@@ -328,22 +292,23 @@ class Checkers:
                 if piece == 0:
                     continue
                 
-                # --- FIXED IDENTIFICATION ---
-                if player == 1:
-                    is_mine = (piece == 1 or piece == 3)
-                else:
-                    is_mine = (piece == 2 or piece == 4)
-                
+                # Determine owner and type
+                is_mine = (abs(piece) % 3 == player)
                 is_king = abs(piece) > 2
                 
                 # Base Value
+                # Kings are significantly more valuable to prevent careless trades
                 piece_val = 500 if is_king else 100 
                 
-                if player == 1: 
+                # Positional Bonus from Table
+                # We flip the row index for RED (Player 1) so the board looks identical to both
+                if player == 1: # Red moves UP (from 7 to 0)
                     pos_val = pst[row][col]
+                    # Bonus for advancing towards promotion
                     advancement = (7 - row) * 3 
-                else:           
-                    pos_val = pst[7-row][col] 
+                else:           # White moves DOWN (from 0 to 7)
+                    pos_val = pst[7-row][col] # Flip PST reference
+                    # Bonus for advancing towards promotion
                     advancement = row * 3
                 
                 if is_mine:
@@ -351,7 +316,8 @@ class Checkers:
                 else:
                     score -= piece_val + (pos_val * 5) + advancement
 
-        # Mobility Bonus
+        # Mobility Bonus (Freedom of movement)
+        # We check move counts to encourage open play and trap avoidance
         self.current_player = player
         my_moves = len(self.get_all_valid_moves())
         self.current_player = opponent
@@ -361,6 +327,7 @@ class Checkers:
         score += (my_moves - opp_moves) * 10
         
         return score
+
 # ============================================================================
 # MCTS Node ( Core Component)
 # ============================================================================
@@ -685,14 +652,11 @@ def visualize_board(board, title="Checkers Board"):
             
             piece = board[row, col]
             if piece != 0:
-                # Correct Piece Identification
-                is_red = (piece == 1 or piece == 3)
-                
                 # Piece colors
-                if is_red:  # Red
+                if abs(piece) % 3 == 1:  # Red
                     piece_color = '#DC143C'
                     edge_color = '#8B0000'
-                else:  # White (Pieces 2 and 4)
+                else:  # White
                     piece_color = '#F5F5F5'
                     edge_color = '#696969'
                 
@@ -1250,4 +1214,3 @@ if len(agent1.policy_table) > 100:
                         st.rerun()
 else:
     st.info(" Train agents first to unlock Human vs AI mode!")
-
