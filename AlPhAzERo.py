@@ -19,7 +19,7 @@ st.set_page_config(
     page_title=" Checkers Arena",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="👑"
+    page_icon="ðŸ‘‘"
 )
 
 st.title("AlphaZero -Inspired Checkers Arena")
@@ -27,12 +27,12 @@ st.markdown("""
 Two AI agents battle using AlphaZero-inspired techniques: Monte Carlo Tree Search combined with sophisticated position evaluation.
 
 **Architecture Components:**
-- 🌳 **MCTS with UCB** - Monte Carlo Tree Search using Upper Confidence Bounds for exploration/exploitation balance
-- 🧠 **Deep Position Evaluation** - Advanced heuristics mimicking neural network evaluation
-- 🎯 **Policy & Value Heads** - Dual output system for move selection and position assessment
-- 🔄 **Self-Play Training** - Agents improve by playing against themselves
-- ⚡ **Minimax with Alpha-Beta** - Strategic depth and tactical precision
-- 🎲 **Hybrid Decision Making** - Combining MCTS planning with minimax tactics
+- ðŸŒ³ **MCTS with UCB** - Monte Carlo Tree Search using Upper Confidence Bounds for exploration/exploitation balance
+- ðŸ§  **Deep Position Evaluation** - Advanced heuristics mimicking neural network evaluation
+- ðŸŽ¯ **Policy & Value Heads** - Dual output system for move selection and position assessment
+- ðŸ”„ **Self-Play Training** - Agents improve by playing against themselves
+- âš¡ **Minimax with Alpha-Beta** - Strategic depth and tactical precision
+- ðŸŽ² **Hybrid Decision Making** - Combining MCTS planning with minimax tactics
 """, unsafe_allow_html=True)
 
 # ============================================================================
@@ -100,16 +100,10 @@ class Checkers:
     def get_piece_moves(self, row, col):
         """Get all valid moves for a piece, prioritizing captures"""
         piece = self.board[row, col]
-        if piece == 0:
+        if piece == 0 or abs(piece) != self.current_player:
             return []
         
-        # Strict ownership check
-        if self.current_player == 1 and piece not in [1, 3]:
-            return []  # Red can only move 1 or 3
-        if self.current_player == 2 and piece not in [2, 4]:
-            return []  # White can only move 2 or 4
-        
-        is_king = piece > 2
+        is_king = abs(piece) > 2
         captures = self._get_captures(row, col, is_king)
         
         if captures:
@@ -128,7 +122,7 @@ class Checkers:
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:  # White moves down
             directions = [(1, -1), (1, 1)]
-        else:  # Kings (3 or 4) move all directions
+        else:  # Kings move both ways
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
@@ -153,7 +147,7 @@ class Checkers:
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:
             directions = [(1, -1), (1, 1)]
-        else:  # Kings (3 or 4) move all directions
+        else:
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
@@ -166,9 +160,8 @@ class Checkers:
             enemy_piece = self.board[jump_row, jump_col]
             
             # Must jump over enemy piece to empty square
-            # Must jump over enemy piece to empty square
             if (enemy_piece != 0 and 
-                enemy_piece % 2 != self.current_player % 2 and
+                (enemy_piece % 3) == (3 - self.current_player) and
                 self.board[land_row, land_col] == 0 and
                 (jump_row, jump_col) not in captured):
                 
@@ -206,7 +199,7 @@ class Checkers:
         for row in range(8):
             for col in range(8):
                 piece = self.board[row, col]
-                if piece != 0 and piece % 2 == self.current_player % 2:
+                if piece != 0 and abs(piece) % 3 == self.current_player:
                     moves = self.get_piece_moves(row, col)
                     if moves and moves[0].captures:
                         has_captures = True
@@ -300,9 +293,8 @@ class Checkers:
                     continue
                 
                 # Determine owner and type
-                # Determine owner and type
-                is_mine = (piece == player or piece == player + 2)
-                is_king = piece > 2
+                is_mine = (abs(piece) % 3 == player)
+                is_king = abs(piece) > 2
                 
                 # Base Value
                 # Kings are significantly more valuable to prevent careless trades
@@ -326,14 +318,11 @@ class Checkers:
 
         # Mobility Bonus (Freedom of movement)
         # We check move counts to encourage open play and trap avoidance
-        # Mobility Bonus (Freedom of movement)
-        # We check move counts to encourage open play and trap avoidance
-        original_player = self.current_player
         self.current_player = player
         my_moves = len(self.get_all_valid_moves())
         self.current_player = opponent
         opp_moves = len(self.get_all_valid_moves())
-        self.current_player = original_player # Reset to what it was
+        self.current_player = player # Reset
         
         score += (my_moves - opp_moves) * 10
         
@@ -677,7 +666,7 @@ def visualize_board(board, title="Checkers Board"):
                 
                 # Draw crown for kings
                 if abs(piece) > 2:
-                    ax.text(col + 0.5, 7-row + 0.5, '♔', 
+                    ax.text(col + 0.5, 7-row + 0.5, 'â™”', 
                            ha='center', va='center', fontsize=24, 
                            color='gold', weight='bold')
     
@@ -790,7 +779,7 @@ def load_agents_from_zip(uploaded_file):
             # 1. Validation
             files = zf.namelist()
             if not all(f in files for f in ["agent1.json", "agent2.json", "config.json"]):
-                st.error("❌ Corrupt File: Missing files in zip.")
+                st.error("âŒ Corrupt File: Missing files in zip.")
                 return None, None, None
 
             # 2. Load JSON data
@@ -841,25 +830,25 @@ def load_agents_from_zip(uploaded_file):
             return agent1, agent2, config, count1 + count2
             
     except Exception as e:
-        st.error(f"❌ Error loading brain: {str(e)}")
+        st.error(f"âŒ Error loading brain: {str(e)}")
         return None, None, None, 0
 # ============================================================================
 # Streamlit UI
 # ============================================================================
 
-st.sidebar.header("⚙️  Controls")
+st.sidebar.header("âš™ï¸  Controls")
 
 with st.sidebar.expander("1. Agent 1 (Red) Parameters", expanded=True):
-    lr1 = st.slider("Learning Rate α₁", 0.1, 1.0, 0.2, 0.05)
-    gamma1 = st.slider("Discount Factor γ₁", 0.8, 0.99, 0.95, 0.01)
-    mcts_sims1 = st.slider("MCTS Simulations₁", 5, 500, 50, 5)
-    minimax_depth1 = st.slider("Minimax Depth₁", 1, 10, 2, 1)
+    lr1 = st.slider("Learning Rate Î±â‚", 0.1, 1.0, 0.2, 0.05)
+    gamma1 = st.slider("Discount Factor Î³â‚", 0.8, 0.99, 0.95, 0.01)
+    mcts_sims1 = st.slider("MCTS Simulationsâ‚", 5, 500, 50, 5)
+    minimax_depth1 = st.slider("Minimax Depthâ‚", 1, 10, 2, 1)
 
 with st.sidebar.expander("2. Agent 2 (White) Parameters", expanded=True):
-    lr2 = st.slider("Learning Rate α₂", 0.1, 1.0, 0.2, 0.05)
-    gamma2 = st.slider("Discount Factor γ₂", 0.8, 0.99, 0.95, 0.01)
-    mcts_sims2 = st.slider("MCTS Simulations₂", 5, 500, 30, 5)
-    minimax_depth2 = st.slider("Minimax Depth₂", 1, 10, 1, 1)
+    lr2 = st.slider("Learning Rate Î±â‚‚", 0.1, 1.0, 0.2, 0.05)
+    gamma2 = st.slider("Discount Factor Î³â‚‚", 0.8, 0.99, 0.95, 0.01)
+    mcts_sims2 = st.slider("MCTS Simulationsâ‚‚", 5, 500, 30, 5)
+    minimax_depth2 = st.slider("Minimax Depthâ‚‚", 1, 10, 1, 1)
 
 with st.sidebar.expander("3. Training Configuration", expanded=True):
     episodes = st.number_input("Training Episodes", 10, 10000, 1000, 10)
@@ -869,21 +858,21 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
     if 'agent1' in st.session_state and st.session_state.agent1:
         
         # --- NEW: Neural Synchronization Section ---
-        st.markdown("### 🧠 Neural Synchronization")
+        st.markdown("### ðŸ§  Neural Synchronization")
         st.caption("Balance the agents by copying the smarter brain.")
         col_sync1, col_sync2 = st.columns(2)
         
         # Button to make Red teach White
-        if col_sync1.button("Red ➡️ White", help="Copy Agent 1's brain to Agent 2"):
+        if col_sync1.button("Red âž¡ï¸ White", help="Copy Agent 1's brain to Agent 2"):
             st.session_state.agent2.policy_table = deepcopy(st.session_state.agent1.policy_table)
             st.session_state.agent2.epsilon = st.session_state.agent1.epsilon
-            st.toast("Agent 2 (White) is now as smart as Agent 1!", icon="⚪")
+            st.toast("Agent 2 (White) is now as smart as Agent 1!", icon="âšª")
 
         # Button to make White teach Red
-        if col_sync2.button("White ➡️ Red", help="Copy Agent 2's brain to Agent 1"):
+        if col_sync2.button("White âž¡ï¸ Red", help="Copy Agent 2's brain to Agent 1"):
             st.session_state.agent1.policy_table = deepcopy(st.session_state.agent2.policy_table)
             st.session_state.agent1.epsilon = st.session_state.agent2.epsilon
-            st.toast("Agent 1 (Red) is now as smart as Agent 2!", icon="🔴")
+            st.toast("Agent 1 (Red) is now as smart as Agent 2!", icon="ðŸ”´")
         
         st.markdown("---")
         # -------------------------------------------
@@ -896,7 +885,7 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
         
         zip_buffer = create_agents_zip(st.session_state.agent1, st.session_state.agent2, config)
         st.download_button(
-            label="💾 Download  Agents",
+            label="ðŸ’¾ Download  Agents",
             data=zip_buffer,
             file_name="_checkers.zip",
             mime="application/zip",
@@ -907,9 +896,9 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
     
     st.markdown("---")
     
-    uploaded_file = st.file_uploader("📤 Upload Saved Agents (.zip)", type="zip")
+    uploaded_file = st.file_uploader("ðŸ“¤ Upload Saved Agents (.zip)", type="zip")
     if uploaded_file is not None:
-        if st.button("🔄 Load Agents", use_container_width=True):
+        if st.button("ðŸ”„ Load Agents", use_container_width=True):
             # Note the extra return variable 'count'
             a1, a2, cfg, count = load_agents_from_zip(uploaded_file)
             if a1 and a2:
@@ -917,7 +906,7 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
                 st.session_state.agent2 = a2
                 st.session_state.training_history = cfg.get("training_history", None)
                 
-                st.toast(f"✅ Loaded Brain! {count} memories restored.", icon="🧠")
+                st.toast(f"âœ… Loaded Brain! {count} memories restored.", icon="ðŸ§ ")
                 import time
                 time.sleep(1)
                 st.rerun() # Refresh so the app uses the new agents immediately
@@ -927,7 +916,7 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
 train_button = st.sidebar.button(" Begin Self-Play Training", 
                                  use_container_width=True, type="primary")
 
-if st.sidebar.button("🧹 Reset Arena", use_container_width=True):
+if st.sidebar.button("ðŸ§¹ Reset Arena", use_container_width=True):
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.cache_data.clear()
@@ -960,16 +949,16 @@ agent2.minimax_depth = minimax_depth2
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric("🔴 Agent 1 (Red)", 
+    st.metric("ðŸ”´ Agent 1 (Red)", 
              f"Policies: {len(agent1.policy_table)}", 
-             f"ε={agent1.epsilon:.4f}")
+             f"Îµ={agent1.epsilon:.4f}")
     st.metric("Wins", agent1.wins)
     st.caption(f"MCTS Sims: {agent1.mcts_simulations}")
 
 with col2:
-    st.metric("⚪ Agent 2 (White)", 
+    st.metric("âšª Agent 2 (White)", 
              f"Policies: {len(agent2.policy_table)}", 
-             f"ε={agent2.epsilon:.4f}")
+             f"Îµ={agent2.epsilon:.4f}")
     st.metric("Wins", agent2.wins)
     st.caption(f"MCTS Sims: {agent2.mcts_simulations}")
 
@@ -982,7 +971,7 @@ st.markdown("---")
 
 # Training
 if train_button:
-    st.subheader("🎯  Self-Play Training")
+    st.subheader("ðŸŽ¯  Self-Play Training")
     
     status = st.empty()
     progress_bar = st.progress(0)
@@ -1027,7 +1016,7 @@ if train_button:
             """)
     
     progress_bar.progress(1.0)
-    st.toast("Training Complete! 🎉", icon="✨")
+    st.toast("Training Complete! ðŸŽ‰", icon="âœ¨")
     st.session_state.training_history = history
     
     import time
@@ -1044,7 +1033,7 @@ if 'training_history' in st.session_state and st.session_state.training_history:
     
     # Check if history actually has data before trying to plot
     if isinstance(history, dict) and 'episode' in history and len(history['episode']) > 0:
-        st.subheader("📊 Training Analytics")
+        st.subheader("ðŸ“Š Training Analytics")
         df = pd.DataFrame(history)
         
         chart_col1, chart_col2 = st.columns(2)
@@ -1057,7 +1046,7 @@ if 'training_history' in st.session_state and st.session_state.training_history:
                 chart_data = df[cols_needed].set_index('episode')
                 st.line_chart(chart_data, color=["#FF4B4B", "#FFFFFF", "#808080"]) # Red, White, Grey
             else:
-                st.warning("⚠️ Incomplete win data in history.")
+                st.warning("âš ï¸ Incomplete win data in history.")
         
         with chart_col2:
             st.write("#### Exploration Rate (Epsilon)")
@@ -1073,11 +1062,11 @@ if 'training_history' in st.session_state and st.session_state.training_history:
             st.line_chart(chart_data)
     else:
         # Gracefully handle empty history
-        st.info("ℹ️ No training history found in this save file. Train more to generate analytics!")
+        st.info("â„¹ï¸ No training history found in this save file. Train more to generate analytics!")
 
 # Final Battle Visualization
 if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
-    st.subheader("⚔️ Final Championship Match")
+    st.subheader("âš”ï¸ Final Championship Match")
     st.info("Watch the trained  agents compete in a decisive battle!")
     
     if st.button(" Watch Them Play!", use_container_width=True):
@@ -1100,7 +1089,7 @@ if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
                 move_num += 1
                 
                 player_name = "Red" if current_player == 1 else "White"
-                move_text.caption(f"Move {move_num}: {player_name} plays {move.start} → {move.end}")
+                move_text.caption(f"Move {move_num}: {player_name} plays {move.start} â†’ {move.end}")
                 
                 fig = visualize_board(sim_env.board, 
                                      f"{player_name}'s Move #{move_num}")
@@ -1111,18 +1100,18 @@ if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
                 time.sleep(0.5)
         
         if sim_env.winner == 1:
-            st.success("🏆 Agent 1 (Red) Wins!")
+            st.success("ðŸ† Agent 1 (Red) Wins!")
         elif sim_env.winner == 2:
-            st.error("🏆 Agent 2 (White) Wins!")
+            st.error("ðŸ† Agent 2 (White) Wins!")
         else:
-            st.warning("🤝 Draw!")
+            st.warning("ðŸ¤ Draw!")
 
 # ============================================================================
 # Human vs AI Arena
 # ============================================================================
 
 st.markdown("---")
-st.header("🎮 Challenge ")
+st.header("ðŸŽ® Challenge ")
 
 st.markdown("""
 <style>
@@ -1148,7 +1137,7 @@ if len(agent1.policy_table) > 100:
         color_choice = st.selectbox("Your Color", ["Red", "White"])
     with col_h3:
         st.write("")
-        if st.button("🎯 Start Game", use_container_width=True, type="primary"):
+        if st.button("ðŸŽ¯ Start Game", use_container_width=True, type="primary"):
             st.session_state.human_env = Checkers()
             st.session_state.human_game_active = True
             
@@ -1168,7 +1157,7 @@ if len(agent1.policy_table) > 100:
         
         # AI turn
         if h_env.current_player == st.session_state.ai_player_id and not h_env.game_over:
-            with st.spinner("🤖  calculating..."):
+            with st.spinner("ðŸ¤–  calculating..."):
                 import time
                 time.sleep(1)
                 ai_move = st.session_state.ai_agent.choose_action(h_env, training=False)
@@ -1179,11 +1168,11 @@ if len(agent1.policy_table) > 100:
         # Status
         if h_env.game_over:
             if h_env.winner == st.session_state.human_player_id:
-                st.success("🎉 YOU WIN! You defeated !")
+                st.success("ðŸŽ‰ YOU WIN! You defeated !")
             elif h_env.winner == st.session_state.ai_player_id:
-                st.error("😮  Wins!")
+                st.error("ðŸ˜®  Wins!")
             else:
-                st.warning("🤝 Draw!")
+                st.warning("ðŸ¤ Draw!")
         else:
             turn = "Your Turn" if h_env.current_player == st.session_state.human_player_id else "AI Thinking..."
             st.caption(f"**{turn}**")
@@ -1216,7 +1205,7 @@ if len(agent1.policy_table) > 100:
                 
                 move_cols = st.columns(min(len(piece_moves), 4))
                 for idx, move in enumerate(piece_moves):
-                    move_desc = f"→ {move.end}"
+                    move_desc = f"â†’ {move.end}"
                     if move.captures:
                         move_desc += f" (Jump {len(move.captures)})"
                     if move_cols[idx % len(move_cols)].button(move_desc, key=f"move_{idx}"):
