@@ -24,9 +24,9 @@ st.set_page_config(
 
 st.title("AlphaZero -Inspired Checkers Arena")
 st.markdown("""
-Two AI agents battle using -inspired techniques: Monte Carlo Tree Search combined with sophisticated position evaluation.
+Two AI agents battle using AlphaZero-inspired techniques: Monte Carlo Tree Search combined with sophisticated position evaluation.
 
-** Architecture Components:**
+**Architecture Components:**
 - 🌳 **MCTS with UCB** - Monte Carlo Tree Search using Upper Confidence Bounds for exploration/exploitation balance
 - 🧠 **Deep Position Evaluation** - Advanced heuristics mimicking neural network evaluation
 - 🎯 **Policy & Value Heads** - Dual output system for move selection and position assessment
