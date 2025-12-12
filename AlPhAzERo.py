@@ -100,7 +100,7 @@ class Checkers:
     def get_piece_moves(self, row, col):
         """Get all valid moves for a piece, prioritizing captures"""
         piece = self.board[row, col]
-        if piece == 0 or abs(piece) != self.current_player:
+        if piece == 0 or piece % 2 != self.current_player % 2:
             return []
         
         is_king = abs(piece) > 2
@@ -160,8 +160,9 @@ class Checkers:
             enemy_piece = self.board[jump_row, jump_col]
             
             # Must jump over enemy piece to empty square
+            # Must jump over enemy piece to empty square
             if (enemy_piece != 0 and 
-                (enemy_piece % 3) == (3 - self.current_player) and
+                enemy_piece % 2 != self.current_player % 2 and
                 self.board[land_row, land_col] == 0 and
                 (jump_row, jump_col) not in captured):
                 
@@ -199,7 +200,7 @@ class Checkers:
         for row in range(8):
             for col in range(8):
                 piece = self.board[row, col]
-                if piece != 0 and abs(piece) % 3 == self.current_player:
+                if piece != 0 and piece % 2 == self.current_player % 2:
                     moves = self.get_piece_moves(row, col)
                     if moves and moves[0].captures:
                         has_captures = True
