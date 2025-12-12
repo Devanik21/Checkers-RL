@@ -16,17 +16,17 @@ from typing import List, Tuple, Optional
 # Page Config
 # ============================================================================
 st.set_page_config(
-    page_title="AlphaZero Checkers Arena",
+    page_title=" Checkers Arena",
     layout="wide",
     initial_sidebar_state="expanded",
     page_icon="👑"
 )
 
-st.title("🎯 AlphaZero-Inspired Checkers Arena")
+st.title("AlphaZero -Inspired Checkers Arena")
 st.markdown("""
-Two AI agents battle using AlphaZero-inspired techniques: Monte Carlo Tree Search combined with sophisticated position evaluation.
+Two AI agents battle using -inspired techniques: Monte Carlo Tree Search combined with sophisticated position evaluation.
 
-**AlphaZero Architecture Components:**
+** Architecture Components:**
 - 🌳 **MCTS with UCB** - Monte Carlo Tree Search using Upper Confidence Bounds for exploration/exploitation balance
 - 🧠 **Deep Position Evaluation** - Advanced heuristics mimicking neural network evaluation
 - 🎯 **Policy & Value Heads** - Dual output system for move selection and position assessment
@@ -262,7 +262,7 @@ class Checkers:
     
     def evaluate_position(self, player):
         """
-        AlphaZero-Inspired Symmetric Evaluation
+        -Inspired Symmetric Evaluation
         Uses a Piece-Square Table (PST) to define positional value purely.
         """
         if self.winner == player:
@@ -329,7 +329,7 @@ class Checkers:
         return score
 
 # ============================================================================
-# MCTS Node (AlphaZero Core Component)
+# MCTS Node ( Core Component)
 # ============================================================================
 
 class MCTSNode:
@@ -355,7 +355,7 @@ class MCTSNode:
         else:
             q_value = self.value()
         
-        # AlphaZero UCB formula
+        #  UCB formula
         u_value = c_puct * self.prior * math.sqrt(parent_visits) / (1 + self.visit_count)
         
         return q_value + u_value
@@ -366,7 +366,7 @@ class MCTSNode:
                    key=lambda child: child.ucb_score(self.visit_count, c_puct))
     
     def expand(self, game, policy_priors):
-        """Expand node with policy priors (like AlphaZero policy head)"""
+        """Expand node with policy priors (like  policy head)"""
         valid_moves = game.get_all_valid_moves()
         
         if not valid_moves:
@@ -394,10 +394,10 @@ class MCTSNode:
             self.parent.backup(-value)  # Negamax: value flips for opponent
 
 # ============================================================================
-# AlphaZero-Inspired Agent
+# -Inspired Agent
 # ============================================================================
 
-class AlphaZeroAgent:
+class Agent:
     def __init__(self, player_id, lr=0.3, gamma=0.99, epsilon=1.0):
         self.player_id = player_id
         self.lr = lr
@@ -453,7 +453,7 @@ class AlphaZeroAgent:
     
     def mcts_search(self, game, num_simulations):
         """
-        Monte Carlo Tree Search - AlphaZero's planning engine
+        Monte Carlo Tree Search - 's planning engine
         """
         root = MCTSNode(game.copy())
         
@@ -546,7 +546,7 @@ class AlphaZeroAgent:
         # Run MCTS
         root = self.mcts_search(game, self.mcts_simulations)
         
-        # Select move with highest visit count (AlphaZero method)
+        # Select move with highest visit count ( method)
         if not root.children:
             return random.choice(moves)
         
@@ -591,7 +591,7 @@ class AlphaZeroAgent:
 # ============================================================================
 
 def play_game(env, agent1, agent2, training=True):
-    """Self-play game between two AlphaZero agents"""
+    """Self-play game between two  agents"""
     env.reset()
     game_history = []
     agents = {1: agent1, 2: agent2}
@@ -821,10 +821,10 @@ def load_agents_from_zip(uploaded_file):
 
             # 4. Reconstruct Agents
             # Create new instances to ensure clean slate
-            agent1 = AlphaZeroAgent(1, config.get('lr1', 0.3), config.get('gamma1', 0.95))
+            agent1 = Agent(1, config.get('lr1', 0.3), config.get('gamma1', 0.95))
             count1 = restore_agent(agent1, a1_data)
             
-            agent2 = AlphaZeroAgent(2, config.get('lr2', 0.3), config.get('gamma2', 0.95))
+            agent2 = Agent(2, config.get('lr2', 0.3), config.get('gamma2', 0.95))
             count2 = restore_agent(agent2, a2_data)
 
             return agent1, agent2, config, count1 + count2
@@ -836,7 +836,7 @@ def load_agents_from_zip(uploaded_file):
 # Streamlit UI
 # ============================================================================
 
-st.sidebar.header("⚙️ AlphaZero Controls")
+st.sidebar.header("⚙️  Controls")
 
 with st.sidebar.expander("1. Agent 1 (Red) Parameters", expanded=True):
     lr1 = st.slider("Learning Rate α₁", 0.1, 1.0, 0.2, 0.05)
@@ -885,9 +885,9 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
         
         zip_buffer = create_agents_zip(st.session_state.agent1, st.session_state.agent2, config)
         st.download_button(
-            label="💾 Download AlphaZero Agents",
+            label="💾 Download  Agents",
             data=zip_buffer,
-            file_name="alphazero_checkers.zip",
+            file_name="_checkers.zip",
             mime="application/zip",
             use_container_width=True
         )
@@ -927,11 +927,11 @@ if 'env' not in st.session_state:
     st.session_state.env = Checkers()
 
 if 'agent1' not in st.session_state:
-    st.session_state.agent1 = AlphaZeroAgent(1, lr1, gamma1)
+    st.session_state.agent1 = Agent(1, lr1, gamma1)
     st.session_state.agent1.mcts_simulations = mcts_sims1
     st.session_state.agent1.minimax_depth = minimax_depth1
     
-    st.session_state.agent2 = AlphaZeroAgent(2, lr2, gamma2)
+    st.session_state.agent2 = Agent(2, lr2, gamma2)
     st.session_state.agent2.mcts_simulations = mcts_sims2
     st.session_state.agent2.minimax_depth = minimax_depth2
 
@@ -971,7 +971,7 @@ st.markdown("---")
 
 # Training
 if train_button:
-    st.subheader("🎯 AlphaZero Self-Play Training")
+    st.subheader("🎯  Self-Play Training")
     
     status = st.empty()
     progress_bar = st.progress(0)
@@ -1067,7 +1067,7 @@ if 'training_history' in st.session_state and st.session_state.training_history:
 # Final Battle Visualization
 if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
     st.subheader("⚔️ Final Championship Match")
-    st.info("Watch the trained AlphaZero agents compete in a decisive battle!")
+    st.info("Watch the trained  agents compete in a decisive battle!")
     
     if st.button(" Watch Them Play!", use_container_width=True):
         sim_env = Checkers()
@@ -1077,7 +1077,7 @@ if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
         agents = {1: agent1, 2: agent2}
         move_num = 0
         
-        with st.spinner("AlphaZero agents thinking..."):
+        with st.spinner(" agents thinking..."):
             while not sim_env.game_over and move_num < 150:
                 current_player = sim_env.current_player
                 move = agents[current_player].choose_action(sim_env, training=False)
@@ -1111,7 +1111,7 @@ if 'agent1' in st.session_state and len(agent1.policy_table) > 100:
 # ============================================================================
 
 st.markdown("---")
-st.header("🎮 Challenge AlphaZero")
+st.header("🎮 Challenge ")
 
 st.markdown("""
 <style>
@@ -1157,7 +1157,7 @@ if len(agent1.policy_table) > 100:
         
         # AI turn
         if h_env.current_player == st.session_state.ai_player_id and not h_env.game_over:
-            with st.spinner("🤖 AlphaZero calculating..."):
+            with st.spinner("🤖  calculating..."):
                 import time
                 time.sleep(1)
                 ai_move = st.session_state.ai_agent.choose_action(h_env, training=False)
@@ -1168,9 +1168,9 @@ if len(agent1.policy_table) > 100:
         # Status
         if h_env.game_over:
             if h_env.winner == st.session_state.human_player_id:
-                st.success("🎉 YOU WIN! You defeated AlphaZero!")
+                st.success("🎉 YOU WIN! You defeated !")
             elif h_env.winner == st.session_state.ai_player_id:
-                st.error("😮 AlphaZero Wins!")
+                st.error("😮  Wins!")
             else:
                 st.warning("🤝 Draw!")
         else:
@@ -1178,7 +1178,7 @@ if len(agent1.policy_table) > 100:
             st.caption(f"**{turn}**")
         
         # Display board
-        fig = visualize_board(h_env.board, "Human vs AlphaZero")
+        fig = visualize_board(h_env.board, "Human vs ")
         st.pyplot(fig)
         plt.close(fig)
         
