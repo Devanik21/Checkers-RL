@@ -118,11 +118,14 @@ class Checkers:
         piece = self.board[row, col]
         
         # Direction based on player
+        # Direction based on player
         if piece == 1:  # Red moves up
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:  # White moves down
             directions = [(1, -1), (1, 1)]
-        else:  # Kings move both ways
+        elif piece == 3:  # Red King
+            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        elif piece == 4:  # White King
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
@@ -143,11 +146,12 @@ class Checkers:
         moves = []
         
         # All diagonal directions
+        # All diagonal directions
         if piece == 1:
             directions = [(-1, -1), (-1, 1)]
         elif piece == 2:
             directions = [(1, -1), (1, 1)]
-        else:
+        elif piece == 3 or piece == 4:  # Kings move all directions
             directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         
         for dr, dc in directions:
@@ -294,8 +298,9 @@ class Checkers:
                     continue
                 
                 # Determine owner and type
-                is_mine = (abs(piece) % 3 == player)
-                is_king = abs(piece) > 2
+                # Determine owner and type
+                is_mine = (piece == player or piece == player + 2)
+                is_king = piece > 2
                 
                 # Base Value
                 # Kings are significantly more valuable to prevent careless trades
@@ -319,11 +324,14 @@ class Checkers:
 
         # Mobility Bonus (Freedom of movement)
         # We check move counts to encourage open play and trap avoidance
+        # Mobility Bonus (Freedom of movement)
+        # We check move counts to encourage open play and trap avoidance
+        original_player = self.current_player
         self.current_player = player
         my_moves = len(self.get_all_valid_moves())
         self.current_player = opponent
         opp_moves = len(self.get_all_valid_moves())
-        self.current_player = player # Reset
+        self.current_player = original_player # Reset to what it was
         
         score += (my_moves - opp_moves) * 10
         
