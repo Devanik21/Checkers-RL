@@ -240,6 +240,64 @@ class Checkers:
         
         return all_moves
 
+    def make_move(self, move: Move):
+        """Execute a move and return (next_state, reward, done)"""
+        if self.game_over:
+            return self.get_state(), 0, True
+        
+        sr, sc = move.start
+        er, ec = move.end
+        
+        piece = self.board[sr, sc]
+        
+        # Move piece
+        self.board[er, ec] = piece
+        self.board[sr, sc] = 0
+        
+        # Handle captures
+        points = 0
+        for cr, cc in move.captures:
+            captured_piece = self.board[cr, cc]
+            self.board[cr, cc] = 0
+            
+            # Points: Kings are worth more (3 points) than Men (1 point)
+            points += 3 if abs(captured_piece) > 2 else 1
+            
+            # Decrease opponent piece count
+            if captured_piece in [1, 3]: # Red piece captured
+                self.pieces_count[1] -= 1
+            else: # White piece captured
+                self.pieces_count[2] -= 1
+        
+        # Promotion to King
+        # Red (1) promotes at row 0, White (2) promotes at row 7
+        if move.promotion:
+            self.board[er, ec] = piece + 2  # 1->3 (Red King), 2->4 (White King)
+            points += 2
+        
+        self.move_history.append(move)
+        
+        # Check win conditions
+        reward = points
+        opponent = 3 - self.current_player
+        
+        # Win Method 1: Elimination
+        if self.pieces_count[opponent] == 0:
+            self.game_over = True
+            self.winner = self.current_player
+            reward = 100
+        else:
+            # Win Method 2: Stalemate (Opponent has no moves)
+            self.current_player = opponent
+            if not self.get_all_valid_moves():
+                self.game_over = True
+                self.winner = 3 - opponent # The player who forced the stalemate wins
+                self.current_player = 3 - opponent
+                reward = 100
+        
+        return self.get_state(), reward, self.game_over
+
+    
     def evaluate_position(self, player):
         """
         AlphaZero-Inspired Symmetric Evaluation
