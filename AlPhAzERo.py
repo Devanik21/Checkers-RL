@@ -887,7 +887,7 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
         st.download_button(
             label="💾 Download  Agents",
             data=zip_buffer,
-            file_name="_checkers.zip",
+            file_name="checkers.zip",
             mime="application/zip",
             use_container_width=True
         )
