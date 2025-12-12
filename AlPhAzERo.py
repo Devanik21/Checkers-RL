@@ -856,6 +856,27 @@ with st.sidebar.expander("3. Training Configuration", expanded=True):
 
 with st.sidebar.expander("4. Brain Storage", expanded=False):
     if 'agent1' in st.session_state and st.session_state.agent1:
+        
+        # --- NEW: Neural Synchronization Section ---
+        st.markdown("### 🧠 Neural Synchronization")
+        st.caption("Balance the agents by copying the smarter brain.")
+        col_sync1, col_sync2 = st.columns(2)
+        
+        # Button to make Red teach White
+        if col_sync1.button("Red ➡️ White", help="Copy Agent 1's brain to Agent 2"):
+            st.session_state.agent2.policy_table = deepcopy(st.session_state.agent1.policy_table)
+            st.session_state.agent2.epsilon = st.session_state.agent1.epsilon
+            st.toast("Agent 2 (White) is now as smart as Agent 1!", icon="⚪")
+
+        # Button to make White teach Red
+        if col_sync2.button("White ➡️ Red", help="Copy Agent 2's brain to Agent 1"):
+            st.session_state.agent1.policy_table = deepcopy(st.session_state.agent2.policy_table)
+            st.session_state.agent1.epsilon = st.session_state.agent2.epsilon
+            st.toast("Agent 1 (Red) is now as smart as Agent 2!", icon="🔴")
+        
+        st.markdown("---")
+        # -------------------------------------------
+
         config = {
             "lr1": lr1, "gamma1": gamma1, "mcts_sims1": mcts_sims1, "minimax_depth1": minimax_depth1,
             "lr2": lr2, "gamma2": gamma2, "mcts_sims2": mcts_sims2, "minimax_depth2": minimax_depth2,
@@ -872,8 +893,6 @@ with st.sidebar.expander("4. Brain Storage", expanded=False):
         )
     else:
         st.info("Train agents first")
-    
-    
     
     st.markdown("---")
     
