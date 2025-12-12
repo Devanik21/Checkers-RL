@@ -118,6 +118,31 @@ class Checkers:
         # Only return simple moves if no captures available
         return self._get_simple_moves(row, col, is_king)
 
+    def _get_simple_moves(self, row, col, is_king):
+        """Get non-capturing moves"""
+        moves = []
+        piece = self.board[row, col]
+        
+        # Direction based on player
+        # 1 = Red Man, 2 = White Man, 3 = Red King, 4 = White King
+        if piece == 1:  # Red moves up
+            directions = [(-1, -1), (-1, 1)]
+        elif piece == 2:  # White moves down
+            directions = [(1, -1), (1, 1)]
+        else:  # Kings (3 or 4) move both ways
+            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        
+        for dr, dc in directions:
+            new_row, new_col = row + dr, col + dc
+            if (0 <= new_row < 8 and 0 <= new_col < 8 and 
+                self.board[new_row, new_col] == 0):
+                # Check for promotion
+                promotion = (piece == 1 and new_row == 0) or (piece == 2 and new_row == 7)
+                moves.append(Move((row, col), (new_row, new_col), [], promotion))
+        
+        return moves
+
+    
     def _get_captures(self, row, col, is_king, captured=None):
         """Recursively find all capture sequences (mandatory jumps)"""
         if captured is None:
